@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StudyFlow — Smart Student Planner</title>
+<meta name="description" content="StudyFlow adalah aplikasi perencana tugas kuliah untuk mahasiswa: kelola deadline, prioritas, progres belajar, dan sesi Pomodoro." />
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233B82F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 10L12 5 2 10l10 5 10-5z'/%3E%3Cpath d='M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5'/%3E%3C/svg%3E" />
+</head>
+<body>
+
+<div class="app-shell">
+
+<!-- ===================== SIDEBAR ===================== -->
+<div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+
+<aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
+  <div class="sidebar-brand">
+    <span class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 10 12 5 2 10l10 5 10-5z" />
+        <path d="M6 12v4.5c0 1.2 2.7 2.5 6 2.5s6-1.3 6-2.5V12" />
+        <path d="M22 10v5" />
+      </svg>
+    </span>
+    <span class="brand-text">
+      <strong>StudyFlow</strong>
+      <small>Plan • Learn • Achieve</small>
+    </span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <p class="nav-label">Menu</p>
+    <ul>
+      <li><button class="nav-item is-active" data-page="dashboard" aria-current="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span></button></li>
+      <li><button class="nav-item" data-page="tugas">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        <span>Daftar Tugas</span><span class="nav-badge" id="navBadgeTugas">0</span></button></li>
+      <li><button class="nav-item" data-page="statistik">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>Statistik</span></button></li>
+      <li><button class="nav-item" data-page="pomodoro">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg>
+        <span>Pomodoro</span></button></li>
+      <li><button class="nav-item" data-page="pengaturan">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.03z"/></svg>
+        <span>Pengaturan</span></button></li>
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="storage-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.5 16.43a6 6 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M12 20h.01"/></svg>
+      <span>Data tersimpan lokal di browser ini</span>
+    </div>
+    <p class="version-note">StudyFlow • Prototype v1.0<br />UAS Sistem Informasi</p>
+  </div>
+</aside>
+
+<!-- ===================== HEADER ===================== -->
+<div class="content">
+
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="icon-btn menu-toggle" id="btnMenu" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="topbar-title">
+      <h1 id="headerGreeting">Halo, Mahasiswa! 👋</h1>
+      <p id="headerDate">—</p>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="searchInput" placeholder="Cari tugas, mata kuliah, catatan…" aria-label="Cari tugas" autocomplete="off" />
+    </div>
+    <button class="btn btn-primary" id="btnAddTask">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Tambah Tugas</span>
+    </button>
+    <div class="avatar" id="userAvatar" title="Akun lokal">M</div>
+  </div>
+</header>
+
+<!-- ===================== MAIN ===================== -->
+<main class="main-area" id="mainContent">
+
+  <!-- ========== HALAMAN DASHBOARD ========== -->
+  <section class="page is-active" id="page-dashboard" data-title="Dashboard">
+
+    <div class="hero">
+      <div class="hero-text">
+        <p class="hero-eyebrow" id="heroEyebrow">Ringkasan hari ini</p>
+        <h2>Jadikan hari ini lebih produktif.</h2>
+        <p class="hero-sub" id="heroSubtitle">Satu langkah kecil hari ini adalah progres besar nanti.</p>
+      </div>
+      <div class="hero-action">
+        <button class="btn btn-light" id="heroAddTask">Tambah tugas baru</button>
+        <button class="btn btn-ghost-light" id="heroGoTasks">Lihat daftar tugas</button>
+      </div>
+    </div>
+
+    <!-- Kartu statistik -->
+    <div class="stat-grid">
+      <article class="card stat-card">
+        <div class="stat-head">
+          <span class="stat-icon icon-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg></span>
+          <p class="stat-label">Total Tugas</p>
+        </div>
+        <p class="stat-value" id="statTotal">0</p>
+        <p class="stat-foot" id="statTotalFoot">Belum ada tugas</p>
+      </article>
+
+      <article class="card stat-card">
+        <div class="stat-head">
+          <span class="stat-icon icon-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+          <p class="stat-label">Tugas Urgent</p>
+        </div>
+        <p class="stat-value" id="statUrgent">0</p>
+        <p class="stat-foot" id="statUrgentFoot">Deadline ≤ 1 hari</p>
+      </article>
+
+      <article class="card stat-card">
+        <div class="stat-head">
+          <span class="stat-icon icon-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <p class="stat-label">Tugas Selesai</p>
+        </div>
+        <p class="stat-value" id="statDone">0</p>
+        <p class="stat-foot" id="statDoneFoot">0 dari 0 tugas</p>
+      </article>
+
+      <article class="card stat-card">
+        <div class="stat-head">
+          <span class="stat-icon icon-warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
+          <p class="stat-label">Progres Belajar</p>
+        </div>
+        <p class="stat-value" id="statProgress">0%</p>
+        <div class="progress-track" role="progressbar" aria-label="Persentase progres" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="statProgressBar">
+          <span class="progress-fill" id="statProgressFill" style="width:0%"></span>
+        </div>
+      </article>
+    </div>
+
+    <!-- Tugas terdekat + Pomodoro -->
+    <div class="grid-2">
+      <section class="card section-card" aria-labelledby="upcomingTitle">
+        <div class="card-head">
+          <div>
+            <h3 id="upcomingTitle">Tugas Terdekat</h3>
+            <p class="card-sub">Diurutkan berdasarkan deadline terdekat</p>
+          </div>
+          <button class="btn btn-soft btn-sm" data-goto="tugas">Lihat semua</button>
+        </div>
+        <ul class="task-list" id="upcomingList"></ul>
+      </section>
+
+      <section class="card section-card" aria-labelledby="pomoTitle">
+        <div class="card-head">
+          <div>
+            <h3 id="pomoTitle">Pomodoro</h3>
+            <p class="card-sub">Fokus 25 menit, istirahat 5 menit</p>
+          </div>
+          <button class="btn btn-soft btn-sm" data-goto="pomodoro">Buka timer</button>
+        </div>
+        <div class="pomo-mini">
+          <div class="pomo-ring-mini">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fill" id="miniRing" cx="60" cy="60" r="52" />
+            </svg>
+            <span class="pomo-time" id="miniTime">25:00</span>
+          </div>
+          <div class="pomo-mini-info">
+            <p class="badge badge-primary" id="miniMode">Fokus</p>
+            <p class="pomo-mini-note" id="miniNote">Tekan mulai saat siap belajar.</p>
+            <div class="pomo-mini-actions">
+              <button class="btn btn-primary btn-sm" id="miniStart">Mulai</button>
+              <button class="btn btn-outline btn-sm" id="miniReset">Reset</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Grafik progres mingguan -->
+    <section class="card section-card" aria-labelledby="chartTitle">
+      <div class="card-head">
+        <div>
+          <h3 id="chartTitle">Progres Mingguan</h3>
+          <p class="card-sub">Tugas dibuat dan tugas selesai dalam 7 hari terakhir</p>
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><i class="dot dot-created"></i> Dibuat</span>
+          <span class="legend-item"><i class="dot dot-done"></i> Selesai</span>
+        </div>
+      </div>
+      <div class="chart-wrap" id="chartWrap"></div>
+    </section>
+
+    <!-- Motivasi -->
+    <section class="motivation-card">
+      <span class="motivation-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M17.7 6.3l1.4-1.4M4.9 19.1l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>
+      </span>
+      <div>
+        <h3>Konsistensi mengalahkan intensitas.</h3>
+        <p id="motivationText">Kerjakan satu tugas sekecil apa pun hari ini — momentum akan mengikuti.</p>
+      </div>
+    </section>
+  </section>
+
+  <!-- ========== HALAMAN DAFTAR TUGAS ========== -->
+  <section class="page" id="page-tugas" data-title="Daftar Tugas" hidden>
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">Daftar Tugas</h2>
+        <p class="page-sub" id="taskCountLabel">0 tugas</p>
+      </div>
+      <button class="btn btn-primary" id="btnAddTask2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Tambah Tugas</span>
+      </button>
+    </div>
+
+    <div class="toolbar card">
+      <div class="filter-chips" id="filterChips" role="group" aria-label="Filter status tugas">
+        <button class="chip is-active" data-filter="semua">Semua</button>
+        <button class="chip" data-filter="belum">Belum dikerjakan</button>
+        <button class="chip" data-filter="sedang">Sedang dikerjakan</button>
+        <button class="chip" data-filter="selesai">Selesai</button>
+        <button class="chip" data-filter="terlambat">Terlambat</button>
+      </div>
+      <div class="toolbar-selects">
+        <label class="select-field">
+          <span>Prioritas</span>
+          <select id="priorityFilter">
+            <option value="semua">Semua prioritas</option>
+            <option value="tinggi">Tinggi</option>
+            <option value="sedang">Sedang</option>
+            <option value="rendah">Rendah</option>
+          </select>
+        </label>
+        <label class="select-field">
+          <span>Urutkan</span>
+          <select id="sortSelect">
+            <option value="deadline">Deadline terdekat</option>
+            <option value="prioritas">Prioritas tertinggi</option>
+            <option value="terbaru">Tugas terbaru</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <ul class="task-list task-list-full" id="taskList"></ul>
+    <div class="empty-state" id="taskEmpty" hidden></div>
+  </section>
+
+  <!-- ========== HALAMAN STATISTIK ========== -->
+  <section class="page" id="page-statistik" data-title="Statistik" hidden>
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">Statistik</h2>
+        <p class="page-sub">Ringkasan performa belajar kamu secara keseluruhan</p>
+      </div>
+      <span class="badge badge-primary" id="demoBadgeStats">Data Demo</span>
+    </div>
+
+    <div class="stat-grid stat-grid-4">
+      <article class="card stat-card">
+        <div class="stat-head"><span class="stat-icon icon-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg></span><p class="stat-label">Total Tugas</p></div>
+        <p class="stat-value" id="stTotal">0</p>
+        <p class="stat-foot">Sepanjang waktu</p>
+      </article>
+      <article class="card stat-card">
+        <div class="stat-head"><span class="stat-icon icon-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><p class="stat-label">Selesai</p></div>
+        <p class="stat-value" id="stDone">0</p>
+        <p class="stat-foot" id="stDoneFoot">Tugas tuntas</p>
+      </article>
+      <article class="card stat-card">
+        <div class="stat-head"><span class="stat-icon icon-warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span><p class="stat-label">Belum Selesai</p></div>
+        <p class="stat-value" id="stPending">0</p>
+        <p class="stat-foot" id="stPendingFoot">Perlu dikerjakan</p>
+      </article>
+      <article class="card stat-card">
+        <div class="stat-head"><span class="stat-icon icon-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span><p class="stat-label">Terlambat</p></div>
+        <p class="stat-value" id="stLate">0</p>
+        <p class="stat-foot">Lewat deadline</p>
+      </article>
+    </div>
+
+    <div class="grid-2">
+      <section class="card section-card" aria-labelledby="courseTitle">
+        <div class="card-head">
+          <div><h3 id="courseTitle">Distribusi per Mata Kuliah</h3><p class="card-sub">Jumlah tugas berdasarkan mata kuliah</p></div>
+        </div>
+        <ul class="dist-list" id="courseList"></ul>
+      </section>
+
+      <section class="card section-card" aria-labelledby="weeklyTitle">
+        <div class="card-head">
+          <div><h3 id="weeklyTitle">Produktivitas Mingguan</h3><p class="card-sub">Aktivitas 7 hari terakhir</p></div>
+        </div>
+        <div class="mini-stats" id="weeklyMini"></div>
+        <div class="chart-wrap chart-wrap-sm" id="chartWrap2"></div>
+      </section>
+    </div>
+
+    <section class="card section-card" aria-labelledby="achTitle">
+      <div class="card-head">
+        <div><h3 id="achTitle">Pencapaian</h3><p class="card-sub">Dihitung dari aktivitas nyata kamu</p></div>
+        <span class="badge badge-soft" id="achCount">0 / 3 terbuka</span>
+      </div>
+      <ul class="achievement-list" id="achievementList"></ul>
+    </section>
+  </section>
+
+  <!-- ========== HALAMAN POMODORO ========== -->
+  <section class="page" id="page-pomodoro" data-title="Pomodoro" hidden>
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">Pomodoro</h2>
+        <p class="page-sub">Teknik fokus: 25 menit belajar, 5 menit istirahat</p>
+      </div>
+    </div>
+
+    <div class="pomo-layout">
+      <section class="card pomo-card">
+        <div class="mode-switch" role="group" aria-label="Pilih mode timer">
+          <button class="mode-btn is-active" id="modeFocus" data-mode="fokus">Fokus 25 menit</button>
+          <button class="mode-btn" id="modeBreak" data-mode="istirahat">Istirahat 5 menit</button>
+        </div>
+
+        <div class="pomo-ring">
+          <svg viewBox="0 0 240 240" aria-hidden="true">
+            <circle class="ring-bg" cx="120" cy="120" r="104" />
+            <circle class="ring-fill" id="bigRing" cx="120" cy="120" r="104" />
+          </svg>
+          <div class="pomo-ring-text">
+            <span class="pomo-status" id="pomoModeLabel">Mode Fokus</span>
+            <strong class="pomo-clock" id="pomoTime">25:00</strong>
+            <span class="pomo-hint" id="pomoHint">Siap belajar</span>
+          </div>
+        </div>
+
+        <div class="pomo-controls">
+          <button class="btn btn-primary" id="btnStart">Mulai</button>
+          <button class="btn btn-outline" id="btnPause">Jeda</button>
+          <button class="btn btn-outline" id="btnResume">Lanjutkan</button>
+          <button class="btn btn-soft" id="btnReset">Reset</button>
+        </div>
+
+        <div class="pomo-alert" id="pomoAlert" role="status" aria-live="polite" hidden></div>
+      </section>
+
+      <aside class="card section-card pomo-side">
+        <h3>Cara pakai</h3>
+        <ol class="steps-list">
+          <li>Pilih <strong>Fokus</strong>, lalu tekan <strong>Mulai</strong>.</li>
+          <li>Tinggalkan tab ini pun tidak masalah — timer memakai waktu sistem, jadi tetap akurat.</li>
+          <li>Saat fokus selesai, aplikasi otomatis menawarkan <strong>Istirahat 5 menit</strong>.</li>
+          <li>Ulangi 4 kali sesi fokus untuk hasil terbaik.</li>
+        </ol>
+        <div class="pomo-counter">
+          <p class="counter-label">Sesi fokus selesai</p>
+          <p class="counter-value" id="sessionCount">0</p>
+        </div>
+        <p class="hint">Sesi yang sudah selesai tercatat di halaman Statistik.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ========== HALAMAN PENGATURAN ========== -->
+  <section class="page" id="page-pengaturan" data-title="Pengaturan" hidden>
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">Pengaturan</h2>
+        <p class="page-sub">Atur profil, durasi timer, dan data tersimpan</p>
+      </div>
+    </div>
+
+    <div class="settings-grid">
+      <section class="card section-card">
+        <h3>Profil</h3>
+        <p class="card-sub">Nama ini hanya dipakai untuk sapaan di dashboard.</p>
+        <label class="field">
+          <span class="field-label">Nama panggilan</span>
+          <input type="text" id="inputUserName" maxlength="24" placeholder="Mahasiswa" />
+        </label>
+        <div class="field-actions">
+          <button class="btn btn-primary btn-sm" id="btnSaveName">Simpan nama</button>
+          <span class="field-msg" id="nameMsg" role="status" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="card section-card">
+        <h3>Durasi Pomodoro</h3>
+        <p class="card-sub">Menit. Gunakan angka 1–90.</p>
+        <div class="two-col">
+          <label class="field">
+            <span class="field-label">Fokus (menit)</span>
+            <input type="number" id="inputFocusMin" min="1" max="90" step="1" value="25" />
+          </label>
+          <label class="field">
+            <span class="field-label">Istirahat (menit)</span>
+            <input type="number" id="inputBreakMin" min="1" max="90" step="1" value="5" />
+          </label>
+        </div>
+        <div class="field-actions">
+          <button class="btn btn-primary btn-sm" id="btnSaveTimer">Simpan durasi</button>
+          <span class="field-msg" id="timerMsg" role="status" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="card section-card">
+        <h3>Data &amp; Penyimpanan</h3>
+        <p class="card-sub">
+          Semua tugas dan pengaturan disimpan di <strong>localStorage</strong> browser perangkat ini.
+          Data tidak otomatis tersinkronisasi ke perangkat lain.
+        </p>
+        <ul class="info-list">
+          <li><span>Jumlah tugas tersimpan</span><strong id="infoTaskCount">0</strong></li>
+          <li><span>Kunci penyimpanan</span><strong>studyflow.tugas.v1</strong></li>
+          <li><span>Versi aplikasi</span><strong>Prototype v1.0</strong></li>
+        </ul>
+        <div class="field-actions">
+          <button class="btn btn-danger btn-sm" id="btnResetDemo">Reset Data Demo</button>
+          <button class="btn btn-outline btn-sm" id="btnClearAll">Hapus semua tugas</button>
+        </div>
+        <p class="hint">“Reset Data Demo” mengembalikan 8 tugas contoh tanpa menghapus tugas buatanmu yang lain.</p>
+      </section>
+
+      <section class="card section-card">
+        <h3>Tentang StudyFlow</h3>
+        <p class="card-sub">Prototype aplikasi perencana tugas kuliah.</p>
+        <p class="about-text">
+          StudyFlow dibuat untuk proyek UAS Sistem Informasi sebagai demonstrrasi alur aplikasi:
+          mengatur tugas, memantau deadline, melihat progres, dan fokus belajar dengan Pomodoro.
+          Dibuat dengan HTML5, CSS3, dan JavaScript murni tanpa backend.
+        </p>
+        <div class="field-actions">
+          <span class="badge badge-soft">100% Client-side</span>
+          <span class="badge badge-soft">Tanpa framework</span>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <p>StudyFlow — Smart Student Planner • Prototype v1.0 • Data disimpan lokal di browser kamu.</p>
+  </footer>
+</main>
+
+</div><!-- /.content -->
+
+</div><!-- /.app-shell -->
+
+<!-- ===================== MODAL TUGAS ===================== -->
+<div class="modal-backdrop" id="taskModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle">Tambah Tugas</h3>
+        <p id="modalDesc">Lengkapi data tugas kuliah kamu.</p>
+      </div>
+      <button class="icon-btn" id="btnCloseModal" aria-label="Tutup modal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form id="taskForm" novalidate>
+      <input type="hidden" id="taskId" />
+
+      <label class="field" for="fieldName">
+        <span class="field-label">Nama tugas <em>*</em></span>
+        <input type="text" id="fieldName" placeholder="Contoh: Laporan Praktikum 3" maxlength="80" />
+        <span class="field-error" id="errName" role="alert"></span>
+      </label>
+
+      <label class="field" for="fieldCourse">
+        <span class="field-label">Mata kuliah <em>*</em></span>
+        <select id="fieldCourse">
+          <option value="">— Pilih mata kuliah —</option>
+          <option value="Dasar Pemrograman">Dasar Pemrograman</option>
+          <option value="PTIK">PTIK</option>
+          <option value="Logika dan Algoritma">Logika dan Algoritma</option>
+          <option value="Pendidikan Pancasila">Pendidikan Pancasila</option>
+          <option value="Bahasa Inggris">Bahasa Inggris</option>
+          <option value="__lainnya">Lainnya…</option>
+        </select>
+        <span class="field-error" id="errCourse" role="alert"></span>
+      </label>
+
+      <label class="field" for="fieldCourseOther" id="wrapCourseOther" hidden>
+        <span class="field-label">Nama mata kuliah lain <em>*</em></span>
+        <input type="text" id="fieldCourseOther" placeholder="Tulis nama mata kuliah" maxlength="60" />
+        <span class="field-error" id="errCourseOther" role="alert"></span>
+      </label>
+
+      <div class="two-col">
+        <label class="field" for="fieldDeadline">
+          <span class="field-label">Deadline <em>*</em></span>
+          <input type="date" id="fieldDeadline" />
+          <span class="field-error" id="errDeadline" role="alert"></span>
+        </label>
+
+        <label class="field" for="fieldPriority">
+          <span class="field-label">Prioritas</span>
+          <select id="fieldPriority">
+            <option value="rendah">Rendah</option>
+            <option value="sedang" selected>Sedang</option>
+            <option value="tinggi">Tinggi</option>
+          </select>
+          <span class="field-hint">Menentukan seberapa penting tugas ini.</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Status</span>
+        <div class="radio-row" role="radiogroup" aria-label="Status tugas">
+          <label class="radio-pill"><input type="radio" name="statusTask" value="belum" checked /><span>Belum Dikerjakan</span></label>
+          <label class="radio-pill"><input type="radio" name="statusTask" value="sedang" /><span>Sedang Dikerjakan</span></label>
+          <label class="radio-pill"><input type="radio" name="statusTask" value="selesai" /><span>Selesai</span></label>
+        </div>
+      </div>
+
+      <label class="field" for="fieldNote">
+        <span class="field-label">Catatan (opsional)</span>
+        <textarea id="fieldNote" rows="3" maxlength="240" placeholder="Detail tugas, link materi, catatan dosen…"></textarea>
+      </label>
+
+      <div class="modal-foot">
+        <button type="button" class="btn btn-outline" id="btnCancelModal">Batal</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveTask">Simpan Tugas</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== DIALOG KONFIRMASI ===================== -->
+<div class="modal-backdrop modal-backdrop-sm" id="confirmModal" hidden>
+  <div class="modal modal-sm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmDesc">
+    <div class="modal-head">
+      <div>
+        <h3 id="confirmTitle">Konfirmasi</h3>
+        <p id="confirmDesc">Apakah kamu yakin?</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-outline" id="btnConfirmCancel">Batal</button>
+      <button type="button" class="btn btn-danger" id="btnConfirmOk">Ya, lanjutkan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+<noscript>
+  <div style="padding:24px;font-family:system-ui;text-align:center">
+    StudyFlow membutuhkan JavaScript untuk berjalan. Mohon aktifkan JavaScript di browser kamu.
+  </div>
+</noscript>
+
+<script src="script.js"></script>
+</body>
+</html>
