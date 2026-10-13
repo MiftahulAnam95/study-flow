@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>StudyFlow — Smart Student Planner</title>
-<meta name="description" content="StudyFlow adalah aplikasi perencana tugas kuliah untuk mahasiswa: kelola deadline, prioritas, progres belajar, dan sesi Pomodoro." />
+<title>StudyFlow — Plan • Learn • Slay ✨</title>
+<meta name="description" content="StudyFlow adalah aplikasi perencana tugas kuliah untuk mahasiswa: kelola deadline, prioritas, progres belajar, streak, dan sesi Pomodoro." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233B82F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 10L12 5 2 10l10 5 10-5z'/%3E%3Cpath d='M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5'/%3E%3C/svg%3E" />
 </head>
@@ -26,7 +29,7 @@
     </span>
     <span class="brand-text">
       <strong>StudyFlow</strong>
-      <small>Plan • Learn • Achieve</small>
+      <small>Plan • Learn • Slay ✨</small>
     </span>
   </div>
 
@@ -52,6 +55,16 @@
   </nav>
 
   <div class="sidebar-footer">
+    <div class="level-card">
+      <div class="level-top">
+        <span class="level-label">Glow-Up Level</span>
+        <strong id="levelLabel">Lv. 1</strong>
+      </div>
+      <div class="level-track" role="progressbar" aria-label="Progres ke level berikutnya" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="levelTrack">
+        <span id="levelFill" style="width:0%"></span>
+      </div>
+      <p class="level-xp" id="levelXp">0 / 100 XP</p>
+    </div>
     <div class="storage-note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.5 16.43a6 6 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M12 20h.01"/></svg>
       <span>Data tersimpan lokal di browser ini</span>
@@ -75,15 +88,17 @@
   </div>
 
   <div class="topbar-right">
+    <span class="streak-pill" id="streakPill" title="Streak: hari beruntun kamu menyelesaikan tugas">🔥 <strong id="streakCount">0</strong></span>
+    <button class="icon-btn theme-toggle" id="btnTheme" type="button" aria-label="Ganti mode terang/gelap" title="Mode malam">🌙</button>
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input type="search" id="searchInput" placeholder="Cari tugas, mata kuliah, catatan…" aria-label="Cari tugas" autocomplete="off" />
+      <input type="search" id="searchInput" placeholder="Cari tugas, matkul, notes… 🤔" aria-label="Cari tugas" autocomplete="off" />
     </div>
     <button class="btn btn-primary" id="btnAddTask">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       <span>Tambah Tugas</span>
     </button>
-    <div class="avatar" id="userAvatar" title="Akun lokal">M</div>
+    <div class="avatar" id="userAvatar" title="Main character">M</div>
   </div>
 </header>
 
@@ -94,10 +109,13 @@
   <section class="page is-active" id="page-dashboard" data-title="Dashboard">
 
     <div class="hero">
-      <div class="hero-text">
-        <p class="hero-eyebrow" id="heroEyebrow">Ringkasan hari ini</p>
+      <span class="hero-sticker hs-1" aria-hidden="true">✨</span>
+    <span class="hero-sticker hs-2" aria-hidden="true">🔥</span>
+    <span class="hero-sticker hs-3" aria-hidden="true">💜</span>
+    <div class="hero-text">
+        <p class="hero-eyebrow" id="heroEyebrow">FYP • For Your Planner ✨</p>
         <h2>Jadikan hari ini lebih produktif.</h2>
-        <p class="hero-sub" id="heroSubtitle">Satu langkah kecil hari ini adalah progres besar nanti.</p>
+        <p class="hero-sub" id="heroSubtitle">POV: kamu yang ngatur deadline, bukan sebaliknya. No cap.</p>
       </div>
       <div class="hero-action">
         <button class="btn btn-light" id="heroAddTask">Tambah tugas baru</button>
@@ -146,13 +164,25 @@
       </article>
     </div>
 
+    <!-- Vibe check harian -->
+    <section class="card vibe-card" aria-labelledby="vibeTitle" id="vibeCard">
+      <div class="card-head">
+        <div>
+          <h3 id="vibeTitle">Vibe Check Hari Ini 🫶</h3>
+          <p class="card-sub" id="vibeSub">Mood-mu gimana hari ini, bestie?</p>
+        </div>
+      </div>
+      <div class="vibe-chips" id="vibeChips" role="group" aria-label="Pilih vibe hari ini"></div>
+      <p class="vibe-done" id="vibeDone" hidden></p>
+    </section>
+
     <!-- Tugas terdekat + Pomodoro -->
     <div class="grid-2">
       <section class="card section-card" aria-labelledby="upcomingTitle">
         <div class="card-head">
           <div>
-            <h3 id="upcomingTitle">Tugas Terdekat</h3>
-            <p class="card-sub">Diurutkan berdasarkan deadline terdekat</p>
+            <h3 id="upcomingTitle">For You (FYP) 📌</h3>
+            <p class="card-sub">Tugasmu yang paling perlu dilihat — diurutkan deadline terdekat</p>
           </div>
           <button class="btn btn-soft btn-sm" data-goto="tugas">Lihat semua</button>
         </div>
@@ -163,7 +193,7 @@
         <div class="card-head">
           <div>
             <h3 id="pomoTitle">Pomodoro</h3>
-            <p class="card-sub">Fokus 25 menit, istirahat 5 menit</p>
+            <p class="card-sub">Fokus 25 menit, healing 5 menit 🍅</p>
           </div>
           <button class="btn btn-soft btn-sm" data-goto="pomodoro">Buka timer</button>
         </div>
@@ -227,6 +257,26 @@
       </button>
     </div>
 
+    <!-- Quick add: ketik, enter, beres. No cap. -->
+    <form class="quickadd card" id="quickAddForm" aria-label="Quick add tugas">
+      <span class="quickadd-bolt" aria-hidden="true">⚡</span>
+      <input type="text" id="quickAddName" placeholder="Quick add: ketik tugas, langsung enter. No cap." maxlength="80" autocomplete="off" aria-label="Nama tugas (quick add)" />
+      <select id="quickAddCourse" class="quickadd-select" aria-label="Mata kuliah (quick add)">
+        <option value="Dasar Pemrograman">Dasar Pemrograman</option>
+        <option value="PTIK">PTIK</option>
+        <option value="Logika dan Algoritma">Logika dan Algoritma</option>
+        <option value="Pendidikan Pancasila">Pendidikan Pancasila</option>
+        <option value="Bahasa Inggris">Bahasa Inggris</option>
+      </select>
+      <select id="quickAddDeadline" class="quickadd-select" aria-label="Deadline (quick add)">
+        <option value="0">Hari ini</option>
+        <option value="1" selected>Besok</option>
+        <option value="3">3 hari lagi</option>
+        <option value="7">Minggu depan</option>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm" id="btnQuickAdd">⚡ Add</button>
+    </form>
+
     <div class="toolbar card">
       <div class="filter-chips" id="filterChips" role="group" aria-label="Filter status tugas">
         <button class="chip is-active" data-filter="semua">Semua</button>
@@ -268,6 +318,7 @@
         <p class="page-sub">Ringkasan performa belajar kamu secara keseluruhan</p>
       </div>
       <span class="badge badge-primary" id="demoBadgeStats">Data Demo</span>
+      <span class="badge badge-streak" id="streakBadgeStats" title="Hari beruntun kamu menyelesaikan tugas">🔥 0 hari</span>
     </div>
 
     <div class="stat-grid stat-grid-4">
@@ -438,20 +489,22 @@
         <h3>Tentang StudyFlow</h3>
         <p class="card-sub">Prototype aplikasi perencana tugas kuliah.</p>
         <p class="about-text">
-          StudyFlow dibuat untuk proyek UAS Sistem Informasi sebagai demonstrrasi alur aplikasi:
-          mengatur tugas, memantau deadline, melihat progres, dan fokus belajar dengan Pomodoro.
-          Dibuat dengan HTML5, CSS3, dan JavaScript murni tanpa backend.
+          StudyFlow dibuat untuk proyek UAS Sistem Informasi sebagai demonstrasi alur aplikasi:
+          CRUD tugas (tambah, lihat, edit, hapus), memantau deadline, melihat progres,
+          main streak &amp; level, plus fokus belajar dengan Pomodoro.
+          Dibuat dengan HTML5, CSS3, dan JavaScript murni tanpa backend. No cap 💜
         </p>
         <div class="field-actions">
           <span class="badge badge-soft">100% Client-side</span>
           <span class="badge badge-soft">Tanpa framework</span>
+          <span class="badge badge-soft">Gen Z approved 💅</span>
         </div>
       </section>
     </div>
   </section>
 
   <footer class="app-footer">
-    <p>StudyFlow — Smart Student Planner • Prototype v1.0 • Data disimpan lokal di browser kamu.</p>
+    <p>StudyFlow — Plan • Learn • Slay ✨ • Prototype v1.0 • Dibuat dengan 💜 • Data tersimpan lokal di browser kamu, no cap.</p>
   </footer>
 </main>
 
@@ -526,6 +579,12 @@
           <label class="radio-pill"><input type="radio" name="statusTask" value="sedang" /><span>Sedang Dikerjakan</span></label>
           <label class="radio-pill"><input type="radio" name="statusTask" value="selesai" /><span>Selesai</span></label>
         </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Pilih vibe tugas ini (opsional) ✨</span>
+        <div class="vibe-emoji-row" id="vibeEmojiRow" role="group" aria-label="Pilih emoji vibe"></div>
+        <input type="hidden" id="fieldVibeEmoji" value="" />
       </div>
 
       <label class="field" for="fieldNote">
