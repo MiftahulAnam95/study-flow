@@ -42,12 +42,28 @@
   const BOBOT_PRIORITAS = { rendah: 1, sedang: 2, tinggi: 3 };
 
   const MOTIVASI = [
-    'Konsistensi mengalahkan intensitas.',
-    'Satu tugas selesai hari ini, satu beban kurang besok.',
-    'Mulai dari yang paling kecil — momentum akan mengikuti.',
-    'Fokus pada proses, hasilnya akan menyusul.',
-    'Deadline bukan musuh, asal kamu yang memegang kendali.'
+    'Konsistensi mengalahkan intensitas. No cap.',
+    'POV: versi kamu seminggu lagi bakal berterima kasih karena ngerjain dari sekarang.',
+    'Satu tugas selesai = satu beban hilang. Easy, bestie.',
+    'Overthinking itu free, tapi kerjain dulu baru overthinking.',
+    'Deadline itu red flag kalau kamu yang males, green flag kalau kamu yang siap.',
+    'Mulai dari yang kecil aja, bestie. Momentum bakal ngejar kamu.',
+    'Fokus dulu, doom scrolling nanti. Janji, 25 menit doang.',
+    'Kamu bukan "nanti-nanti", kamu "sekarang". Slay it 💅'
   ];
+
+  // Opsi vibe check harian (mood Gen Z)
+  const VIBE_HARI_INI = [
+    { nilai: 'onfire', emoji: '🔥', label: 'On fire' },
+    { nilai: 'glowup', emoji: '✨', label: 'Glow up' },
+    { nilai: 'leleh', emoji: '🫠', label: 'Leleh' },
+    { nilai: 'overthinking', emoji: '😭', label: 'Overthinking' },
+    { nilai: 'chill', emoji: '🧊', label: 'Chill' },
+    { nilai: 'slay', emoji: '💅', label: 'Slay mode' }
+  ];
+
+  // Emoji vibe yang bisa dipasang per tugas
+  const EMOJI_VIBE_TUGAS = ['🔥', '🫶', '😤', '✨', '🧊', '💤'];
 
   // State aplikasi (sumber kebenaran tunggal untuk render)
   const state = {
@@ -58,11 +74,15 @@
     sort: 'deadline',// mode pengurutan
     page: 'dashboard',// halaman aktif
     demoAktif: false, // apakah masih memakai data demo
+    levelTerakhir: 0, // level terakhir (untuk deteksi level up)
+    inisialisasiSelesai: false, // deteksi level up aktif setelah inisiasi
     prefs: {
       nama: '',
       fokusMenit: 25,
       istirahatMenit: 5,
-      sesiFokus: 0
+      sesiFokus: 0,
+      vibe: null,     // { tanggal: 'YYYY-MM-DD', nilai: 'onfire' } — vibe check harian
+      tema: 'terang'  // 'terang' | 'gelap' (mode malam)
     }
   };
 
@@ -159,8 +179,187 @@
 
   function tanggalHariIniIndo() {
     return new Date().toLocaleDateString('id-ID', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'long'
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
+  }
+
+  /* =========================================================
+     2b. ENGIN GEN Z: STREAK, XP/LEVEL, VIBE, TEMA, CONFETTI
+     ========================================================= */
+
+  // Kumpulan tanggal (ISO) yang punya minimal 1 tugas selesai
+  function petaTanggalSelesai(tugas) {
+    const peta = {};
+    for (const t of tugas) {
+      if (t.status === 'selesai' && typeof t.completedAt === 'string') {
+        peta[t.completedAt.slice(0, 10)] = true;
+      }
+    }
+    return peta;
+  }
+
+  // Streak: hari beruntun (akhirnya hari ini atau kemarin) yang ada tugas selesai
+  function hitungStreak(tugas) {
+    const selesaiPada = petaTanggalSelesai(tugas);
+    const dasar = hariIni();
+    let cursor = new Date(dasar.getFullYear(), dasar.getMonth(), dasar.getDate());
+    if (!selesaiPada[keISO(cursor)]) {
+      // Hari ini belum ada? Streak masih hidup mulai dari kemarin
+      cursor = new Date(dasar.getFullYear(), dasar.getMonth(), dasar.getDate() - 1);
+    }
+    let streak = 0;
+    while (selesaiPada[keISO(cursor)]) {
+      streak++;
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - 1);
+    }
+    return streak;
+  }
+
+  // XP & level "glow up": nambah tugas +5, selesaikan +20, sesi fokus +10
+  function hitungXP(tugas, prefs) {
+    const selesai = tugas.filter(function (t) { return t.status === 'selesai'; }).length;
+    const xp = tugas.length * 5 + selesai * 20 + (prefs.sesiFokus || 0) * 10;
+    const level = Math.floor(xp / 100) + 1;
+    return { xp: xp, level: level, sisaKeLevel: xp % 100, butuh: 100 };
+  }
+
+  // Sapaan sesuai jam (bestie edition) — nama disambung terpisah di renderHeader
+  function sapaanHari() {
+    const jam = new Date().getHours();
+    if (jam < 4) return 'Malem-malem masih online? 🌙';
+    if (jam < 11) return 'Good morning! ☀️';
+    if (jam < 15) return 'Siang-siang! 🌤️';
+    if (jam < 18) return 'Sore-sore, healing dulu? 🌇';
+    return 'Malem-malem masih ngegas? 🌙';
+  }
+
+  function dataVibe(nilai) {
+    return VIBE_HARI_INI.find(function (v) { return v.nilai === nilai; }) || null;
+  }
+
+  // Vibe check harian: pilih mood, disimpan per tanggal
+  function pilihVibe(nilai) {
+    if (!dataVibe(nilai)) return;
+    state.prefs.vibe = { tanggal: isoHariIni(), nilai: nilai };
+    simpanPref();
+    renderVibeCheck();
+    renderHeader();
+    const d = dataVibe(nilai);
+    tampilkanToast('Vibe hari ini terkunci: ' + d.emoji + ' ' + d.label, 'success');
+  }
+
+  function renderVibeCheck() {
+    const wadah = $('vibeChips');
+    if (!elemanAman(wadah)) return;
+    wadah.textContent = '';
+
+    const vibe = state.prefs.vibe;
+    const vibeHariIni = vibe && vibe.tanggal === isoHariIni() ? vibe.nilai : null;
+
+    for (const v of VIBE_HARI_INI) {
+      const chip = buatElemen('button', 'vibe-chip' + (vibeHariIni === v.nilai ? ' is-active' : ''));
+      chip.type = 'button';
+      chip.setAttribute('aria-pressed', String(vibeHariIni === v.nilai));
+      chip.textContent = v.emoji + ' ' + v.label;
+      chip.addEventListener('click', function () { pilihVibe(v.nilai); });
+      wadah.appendChild(chip);
+    }
+
+    const sub = $('vibeSub');
+    if (sub) {
+      sub.textContent = vibeHariIni
+        ? 'Kamu udah jawab. Boleh ganti kok, no judgement.'
+        : 'Mood-mu gimana hari ini, bestie?';
+    }
+
+    const done = $('vibeDone');
+    if (done) {
+      if (vibeHariIni) {
+        const d = dataVibe(vibeHariIni);
+        done.hidden = false;
+        done.textContent = 'Vibe hari ini: ' + d.emoji + ' ' + d.label + ' — tetap slay!';
+      } else {
+        done.hidden = true;
+      }
+    }
+  }
+
+  // Confetti (semprotkan saat momen slay)
+  function semprotConfetti() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const warna = ['#7C5CFC', '#F472B6', '#FBBF24', '#34D399', '#60A5FA', '#F97316'];
+    const emoji = ['✨', '🎉', '⭐', '💜'];
+    const wadah = document.createElement('div');
+    wadah.className = 'confetti-wrap';
+    wadah.setAttribute('aria-hidden', 'true');
+
+    for (let i = 0; i < 28; i++) {
+      const p = document.createElement('span');
+      p.className = 'confetti-piece';
+      if (i % 6 === 0) {
+        p.textContent = emoji[Math.floor(Math.random() * emoji.length)];
+      } else {
+        p.style.background = warna[Math.floor(Math.random() * warna.length)];
+        if (i % 2) p.style.borderRadius = '50%';
+      }
+      p.style.left = (8 + Math.random() * 84) + '%';
+      p.style.animationDelay = (Math.random() * 0.25).toFixed(2) + 's';
+      p.style.animationDuration = (1.1 + Math.random() * 0.7).toFixed(2) + 's';
+      p.style.setProperty('--putar', (Math.round(Math.random() * 720) - 360) + 'deg');
+      wadah.appendChild(p);
+    }
+
+    document.body.appendChild(wadah);
+    window.setTimeout(function () {
+      if (wadah.parentNode) wadah.parentNode.removeChild(wadah);
+    }, 2200);
+  }
+
+  // Tema terang / mode malam
+  function terapkanTema() {
+    const gelap = state.prefs.tema === 'gelap';
+    document.documentElement.setAttribute('data-theme', gelap ? 'gelap' : 'terang');
+    const btn = $('btnTheme');
+    if (btn) {
+      btn.textContent = gelap ? '☀️' : '🌙';
+      btn.title = gelap ? 'Mode siang' : 'Mode malam';
+    }
+  }
+
+  function setTema(tema) {
+    const valid = tema === 'gelap' ? 'gelap' : 'terang';
+    state.prefs.tema = valid;
+    simpanPref();
+    terapkanTema();
+    tampilkanToast(valid === 'gelap' ? 'Mode malam nyala 🌙 Fokus malam hari, valid!' : 'Mode siang nyala ☀️ Cerah & fresh!', 'info');
+  }
+
+  // Quick add: nama + matkul + deadline cepat, tanpa buka modal
+  function quickAdd(event) {
+    if (event) event.preventDefault();
+    const namaEl = $('quickAddName');
+    if (!namaEl) return;
+
+    const nama = namaEl.value.trim();
+    if (!nama) {
+      tampilkanToast('Isi nama tugas dulu, bestie. No cap.', 'error');
+      namaEl.focus();
+      return;
+    }
+    if (nama.length < 3) {
+      tampilkanToast('Nama minimal 3 karakter biar nggak ambig.', 'error');
+      return;
+    }
+
+    const course = $('quickAddCourse').value || 'Umum';
+    const offset = Number($('quickAddDeadline').value) || 1;
+    const d = new Date();
+    const deadline = keISO(new Date(d.getFullYear(), d.getMonth(), d.getDate() + offset));
+
+    tambahTugas({ name: nama, course: course, deadline: deadline, priority: 'sedang', status: 'belum', note: '', vibeEmoji: '' });
+    namaEl.value = '';
+    renderSemua();
+    tampilkanToast('⚡ Quick add sukses! “' + nama + '” udah masuk planner.', 'success');
   }
 
   /* =========================================================
@@ -247,6 +446,7 @@
         priority: priority,
         status: status,
         note: typeof item.note === 'string' ? item.note : '',
+        vibeEmoji: typeof item.vibeEmoji === 'string' ? item.vibeEmoji : '',
         createdAt: typeof item.createdAt === 'string' ? item.createdAt : stempelWaktuLokal(),
         completedAt: status === 'selesai' && typeof item.completedAt === 'string' ? item.completedAt : (status === 'selesai' ? stempelWaktuLokal() : null),
         isDemo: item.isDemo === true
@@ -263,14 +463,14 @@
     };
 
     const contoh = [
-      { name: 'Laporan Praktikum 3: Percabangan', course: 'Dasar Pemrograman', offset: 0, priority: 'tinggi', status: 'sedang', note: 'Kumpulkan lewat GitHub Classroom sebelum jam 23.59.' },
-      { name: 'Membuat 10 soal evaluasi Logika', course: 'Logika dan Algoritma', offset: 1, priority: 'sedang', status: 'belum', note: 'Sertakan kunci jawaban dan alasan singkat.' },
-      { name: 'Presentasi micro-teaching', course: 'PTIK', offset: 2, priority: 'tinggi', status: 'belum', note: 'Durasi maksimal 10 menit, siapkan slide.' },
-      { name: 'Esai refleksi nilai Pancasila', course: 'Pendidikan Pancasila', offset: 4, priority: 'rendah', status: 'belum', note: 'Minimal 500 kata, format PDF.' },
-      { name: 'Latihan speaking: self introduction', course: 'Bahasa Inggris', offset: 6, priority: 'sedang', status: 'belum', note: 'Rekam video 2 menit, kirim ke dosen.' },
-      { name: 'Membuat video pembelajaran 5 menit', course: 'PTIK', offset: 9, priority: 'sedang', status: 'belum', note: 'Topik bebas sesuai modul 4.' },
-      { name: 'Tugas mandiri: flowchart program', course: 'Logika dan Algoritma', offset: -2, priority: 'tinggi', status: 'belum', note: 'Gunakan draw.io atau di gambar rapi.' },
-      { name: 'Kuis harian Bab 2', course: 'Dasar Pemrograman', offset: -4, priority: 'rendah', status: 'selesai', note: 'Nilai 92. Sudah dikumpulkan.' }
+      { name: 'Laporan Praktikum 3: Percabangan', course: 'Dasar Pemrograman', offset: 0, priority: 'tinggi', status: 'sedang', note: 'Kumpulkan lewat GitHub Classroom sebelum jam 23.59, no cap.' },
+      { name: 'Membuat 10 soal evaluasi Logika', course: 'Logika dan Algoritma', offset: 1, priority: 'sedang', status: 'belum', note: 'Sertakan kunci jawaban + alasan. Dosen suka yang rapi.' },
+      { name: 'Presentasi micro-teaching', course: 'PTIK', offset: 2, priority: 'tinggi', status: 'belum', note: 'Maksimal 10 menit, siapkan slide yang aesthetic.' },
+      { name: 'Esai refleksi nilai Pancasila', course: 'Pendidikan Pancasila', offset: 4, priority: 'rendah', status: 'belum', note: 'Minimal 500 kata, format PDF. Easy.' },
+      { name: 'Latihan speaking: self introduction', course: 'Bahasa Inggris', offset: 6, priority: 'sedang', status: 'belum', note: 'Rekam video 2 menit. Take 1 doang, pede aja.' },
+      { name: 'Membuat video pembelajaran 5 menit', course: 'PTIK', offset: 9, priority: 'sedang', status: 'belum', note: 'Topik bebas, bikin yang engaging.' },
+      { name: 'Tugas mandiri: flowchart program', course: 'Logika dan Algoritma', offset: -2, priority: 'tinggi', status: 'belum', note: 'Gunakan draw.io atau gambar rapi (kalau bisa).' },
+      { name: 'Kuis harian Bab 2', course: 'Dasar Pemrograman', offset: -4, priority: 'rendah', status: 'selesai', note: 'Nilai 92. Slay ✅' }
     ];
 
     return contoh.map(function (item, indeks) {
@@ -319,6 +519,10 @@
       state.prefs.fokusMenit = angkaValid(p.fokusMenit, 1, 90, 25);
       state.prefs.istirahatMenit = angkaValid(p.istirahatMenit, 1, 90, 5);
       state.prefs.sesiFokus = angkaValid(p.sesiFokus, 0, 9999, 0);
+      state.prefs.tema = p.tema === 'gelap' ? 'gelap' : 'terang';
+      state.prefs.vibe = (p.vibe && typeof p.vibe === 'object'
+        && typeof p.vibe.tanggal === 'string' && typeof p.vibe.nilai === 'string'
+        && dataVibe(p.vibe.nilai)) ? p.vibe : null;
       if (typeof p.page === 'string') state.page = p.page;
     }
   }
@@ -340,6 +544,7 @@
       priority: data.priority,
       status: data.status,
       note: data.note,
+      vibeEmoji: data.vibeEmoji || '',
       createdAt: stempelWaktuLokal(),
       completedAt: data.status === 'selesai' ? stempelWaktuLokal() : null,
       isDemo: false
@@ -359,6 +564,7 @@
     tugas.deadline = data.deadline;
     tugas.priority = data.priority;
     tugas.note = data.note;
+    tugas.vibeEmoji = data.vibeEmoji || '';
 
     if (tugas.status !== data.status) {
       tugas.status = data.status;
@@ -443,10 +649,10 @@
     const total = tugas.length;
     let selesai = 0, sedang = 0, belum = 0, terlambat = 0, urgent = 0, perhatian = 0;
 
-    for (const tugas of tugas) {
-      if (tugas.status === 'selesai') { selesai++; continue; }
-      if (tugas.status === 'sedang') sedang++; else belum++;
-      const urg = tingkatUrgensi(tugas);
+    for (const item of tugas) {
+      if (item.status === 'selesai') { selesai++; continue; }
+      if (item.status === 'sedang') sedang++; else belum++;
+      const urg = tingkatUrgensi(item);
       if (urg === 'terlambat') terlambat++;
       else if (urg === 'urgent') urgent++;
       else if (urg === 'perhatian') perhatian++;
@@ -472,8 +678,8 @@
   // Menghitung jumlah tugas per tanggal berdasarkan kolom tertentu
   function hitungPerHari(tugas, kolom) {
     const peta = {};
-    for (const tugas of tugas) {
-      const nilai = tugas[kolom];
+    for (const item of tugas) {
+      const nilai = item[kolom];
       if (!nilai || typeof nilai !== 'string') continue;
       const kunci = nilai.slice(0, 10); // ambil bagian YYYY-MM-DD
       peta[kunci] = (peta[kunci] || 0) + 1;
@@ -497,8 +703,8 @@
 
   function distribusiMataKuliah(tugas) {
     const peta = {};
-    for (const tugas of tugas) {
-      const nama = tugas.course || 'Umum';
+    for (const item of tugas) {
+      const nama = item.course || 'Umum';
       peta[nama] = (peta[nama] || 0) + 1;
     }
     return Object.keys(peta)
@@ -522,9 +728,10 @@
     }).length;
 
     return [
-      { id: 'first', judul: 'First Step', deskripsi: 'Selesaikan tugas pertamamu.', nilai: selesai.length, target: 1 },
-      { id: 'gtd', judul: 'Getting Things Done', deskripsi: 'Selesaikan lima tugas.', nilai: selesai.length, target: 5 },
-      { id: 'master', judul: 'Deadline Master', deskripsi: 'Selesaikan tiga tugas sebelum atau tepat pada deadline.', nilai: tepatWaktu, target: 3 }
+      { id: 'first', judul: 'First Slay', deskripsi: 'Selesaikan tugas pertamamu. 💅', nilai: selesai.length, target: 1 },
+      { id: 'gtd', judul: 'No Cap', deskripsi: 'Selesaikan lima tugas. Konsisten banget.', nilai: selesai.length, target: 5 },
+      { id: 'master', judul: 'Deadline Master', deskripsi: 'Selesaikan tiga tugas tepat waktu. 👑', nilai: tepatWaktu, target: 3 },
+      { id: 'streak', judul: 'Streak Machine', deskripsi: 'Jaga streak 3 hari beruntun. 🔥', nilai: hitungStreak(tugas), target: 3 }
     ];
   }
 
@@ -636,18 +843,58 @@
   /* ---------- Header & navigasi ---------- */
 
   function renderHeader() {
-    const nama = state.prefs.nama.trim();
+    const nama = state.prefs.nama.trim() || 'bestie';
+    const vibe = state.prefs.vibe;
+    const vibeHariIni = vibe && vibe.tanggal === isoHariIni() ? vibe.nilai : null;
+
     const sapaan = $('headerGreeting');
-    if (sapaan) sapaan.textContent = 'Halo, ' + (nama || 'Mahasiswa') + '! 👋';
+    if (sapaan) {
+      let teks = sapaanHari() + ' ' + nama + '!';
+      if (vibeHariIni) teks += ' ' + dataVibe(vibeHariIni).emoji;
+      sapaan.textContent = teks;
+    }
 
     const tanggalEl = $('headerDate');
     if (tanggalEl) tanggalEl.textContent = tanggalHariIniIndo();
 
     const avatar = $('userAvatar');
     if (avatar) {
-      avatar.textContent = (nama ? nama.charAt(0).toUpperCase() : 'M');
-      avatar.setAttribute('title', nama ? 'Akun lokal: ' + nama : 'Akun lokal');
+      avatar.textContent = (state.prefs.nama.trim() ? state.prefs.nama.charAt(0).toUpperCase() : 'M');
+      avatar.setAttribute('title', 'Main character: ' + nama);
     }
+
+    // Streak di topbar
+    const streak = hitungStreak(state.tasks);
+    const streakCount = $('streakCount');
+    if (streakCount) streakCount.textContent = String(streak);
+    const streakPill = $('streakPill');
+    if (streakPill) {
+      streakPill.title = streak > 0
+        ? 'Streak ' + streak + ' hari beruntun. Jangan sampai putus, bestie! 🔥'
+        : 'Selesaikan 1 tugas hari ini buat nyalain streak. 🔥';
+      streakPill.classList.toggle('is-hot', streak >= 3);
+    }
+
+    // Level & XP di sidebar
+    renderLevel(hitungXP(state.tasks, state.prefs));
+  }
+
+  function renderLevel(info) {
+    const label = $('levelLabel');
+    if (label) label.textContent = 'Lv. ' + info.level;
+    const xp = $('levelXp');
+    if (xp) xp.textContent = info.sisaKeLevel + ' / ' + info.butuh + ' XP';
+    const track = $('levelTrack');
+    if (track) track.setAttribute('aria-valuenow', String(info.sisaKeLevel));
+    const fill = $('levelFill');
+    if (fill) fill.style.width = info.sisaKeLevel + '%';
+
+    // Deteksi level up (cuma setelah inisialisasi)
+    if (state.inisialisasiSelesai && state.levelTerakhir && info.level > state.levelTerakhir) {
+      tampilkanToast('LEVEL UP! 🎉 Kamu sekarang Lv.' + info.level + '. Glow up terus, bestie!', 'success');
+      semprotConfetti();
+    }
+    state.levelTerakhir = info.level;
   }
 
   function pindahHalaman(namaHalaman) {
@@ -769,10 +1016,12 @@
       const sebelumnyaSelesai = tugas.status === 'selesai';
       tandaiSelesai(tugas.id);
       renderSemua();
-      tampilkanToast(
-        sebelumnyaSelesai ? 'Status selesai dibatalkan.' : 'Mantap! Tugas ditandai selesai. 🎉',
-        sebelumnyaSelesai ? 'info' : 'success'
-      );
+      if (sebelumnyaSelesai) {
+        tampilkanToast('Oke, statusnya balik dulu ya.', 'info');
+      } else {
+        tampilkanToast('SLAY! Tugas beres 💅 (+20 XP)', 'success');
+        semprotConfetti();
+      }
     });
     item.appendChild(tombolCek);
 
@@ -781,6 +1030,12 @@
 
     const barisJudul = buatElemen('div', 'task-title-row');
     barisJudul.appendChild(buatElemen('span', 'task-name', tugas.name));
+    if (tugas.vibeEmoji) {
+      const vibe = buatElemen('span', 'task-vibe-emoji', tugas.vibeEmoji);
+      vibe.setAttribute('title', 'Vibe tugas ini');
+      vibe.setAttribute('aria-hidden', 'true');
+      barisJudul.appendChild(vibe);
+    }
     barisJudul.appendChild(buatBadgeUrgensi(tugas));
     barisJudul.appendChild(buatBadgePrioritas(tugas));
     if (tugas.isDemo) barisJudul.appendChild(buatElemen('span', 'badge badge-demo', 'Demo'));
@@ -838,11 +1093,11 @@
   function buatBadgeUrgensi(tugas) {
     const urg = tingkatUrgensi(tugas);
     const peta = {
-      urgent: { kelas: 'badge badge-danger', teks: 'Urgent', ikon: 'alarm' },
-      perhatian: { kelas: 'badge badge-warning', teks: 'Perhatian', ikon: 'jam' },
-      terlambat: { kelas: 'badge badge-danger', teks: 'Terlambat', ikon: 'peringatan' },
-      normal: { kelas: 'badge badge-neutral', teks: 'Normal', ikon: 'kalender' },
-      selesai: { kelas: 'badge badge-success', teks: 'Selesai', ikon: 'centang' }
+      urgent: { kelas: 'badge badge-danger', teks: 'Urgent 💀', ikon: 'alarm' },
+      perhatian: { kelas: 'badge badge-warning', teks: 'Kenceng 😬', ikon: 'jam' },
+      terlambat: { kelas: 'badge badge-danger', teks: 'Red flag 🚩', ikon: 'peringatan' },
+      normal: { kelas: 'badge badge-neutral', teks: 'Aman 🧊', ikon: 'kalender' },
+      selesai: { kelas: 'badge badge-success', teks: 'Slay ✅', ikon: 'centang' }
     };
     const data = peta[urg] || peta.normal;
     const badge = buatElemen('span', data.kelas, data.teks);
@@ -855,9 +1110,9 @@
 
   function buatBadgePrioritas(tugas) {
     const peta = {
-      tinggi: { kelas: 'badge badge-soft', teks: 'Prioritas: Tinggi' },
-      sedang: { kelas: 'badge badge-neutral', teks: 'Prioritas: Sedang' },
-      rendah: { kelas: 'badge badge-neutral', teks: 'Prioritas: Rendah' }
+      tinggi: { kelas: 'badge badge-soft', teks: 'Prioritas: Tinggi 🔥' },
+      sedang: { kelas: 'badge badge-neutral', teks: 'Prioritas: Sedang 🙂' },
+      rendah: { kelas: 'badge badge-neutral', teks: 'Prioritas: Rendah 🧊' }
     };
     const data = peta[tugas.priority] || peta.sedang;
     const badge = buatElemen('span', data.kelas, data.teks);
@@ -871,20 +1126,20 @@
     const stats = hitungStatistik(state.tasks);
     renderStatistikDashboard(stats);
 
-    // Teks hero menyesuaikan kondisi data
+    // Teks hero menyesuaikan kondisi data (Gen Z edition)
     const eyebrow = $('heroEyebrow');
     if (eyebrow) {
       eyebrow.textContent = stats.total === 0
-        ? 'Mulai dari sini'
-        : (stats.progress === 100 ? 'Semua tugas beres 🎉' : 'Ringkasan hari ini');
+        ? 'FYP kamu masih kosong'
+        : (stats.progress === 100 ? 'FYP: kamu slay semua 🎉' : 'FYP • For Your Planner ✨');
     }
     const sub = $('heroSubtitle');
     if (sub) {
-      if (stats.total === 0) sub.textContent = 'Tambahkan tugas pertamamu dan mulai atur jadwal kuliah.';
-      else if (stats.progress === 100) sub.textContent = 'Semua tugas sudah selesai. Saatnya beri penghargaan untuk diri sendiri!';
-      else if (stats.terlambat > 0) sub.textContent = 'Ada ' + stats.terlambat + ' tugas terlambat. Kerjakan yang paling mendesak dulu.';
-      else if (stats.urgent > 0) sub.textContent = 'Ada ' + stats.urgent + ' tugas dengan deadline sangat dekat. Fokus satu per satu.';
-      else sub.textContent = stats.belumSelesai + ' tugas menunggu untuk dikerjakan. Kamu pasti bisa!';
+      if (stats.total === 0) sub.textContent = 'Planner kamu masih kosong. Tambah tugas pertamamu, let’s go! 🚀';
+      else if (stats.progress === 100) sub.textContent = 'Semua tugas beres. Treat yourself dulu, bestie! 🎉';
+      else if (stats.terlambat > 0) sub.textContent = 'Ada ' + stats.terlambat + ' tugas telat. Gas kerjain yang paling mendesak dulu 💪';
+      else if (stats.urgent > 0) sub.textContent = 'Ada ' + stats.urgent + ' tugas deadline-nya deket banget. Fokus satu per satu ya.';
+      else sub.textContent = stats.belumSelesai + ' tugas nunggu kamu. Mulai dari yang paling kecil aja ✨';
     }
 
     // Tugas terdekat (yang belum selesai, diurutkan deadline)
@@ -898,10 +1153,10 @@
 
       if (terdekat.length === 0) {
         wadahUpcoming.appendChild(buatEmptyStateInline(
-          state.tasks.length === 0 ? 'Belum ada tugas' : 'Semua tugas sudah selesai',
+          state.tasks.length === 0 ? 'FYP kamu masih kosong' : 'Kamu slay semua! 🎉',
           state.tasks.length === 0
-            ? 'Tekan “Tambah Tugas” untuk mulai menyusun rencana belajar.'
-            : 'Kerja bagus! Tambahkan tugas baru kalau sudah ada materi berikutnya.'
+            ? 'Tekan “Tambah Tugas” atau pakai quick add ⚡ buat mulai.'
+            : 'Kerja bagus, bestie! Tambah tugas baru kalau udah ada materi berikutnya.'
         ));
       } else {
         for (const tugas of terdekat) {
@@ -1033,6 +1288,13 @@
     if (badgeDemo) {
       badgeDemo.textContent = state.demoAktif ? 'Masih memakai Data Demo' : 'Data milik kamu';
       badgeDemo.className = state.demoAktif ? 'badge badge-demo' : 'badge badge-success';
+    }
+
+    // Badge streak
+    const badgeStreak = $('streakBadgeStats');
+    if (badgeStreak) {
+      const streak = hitungStreak(state.tasks);
+      badgeStreak.textContent = '🔥 ' + streak + ' hari beruntun';
     }
 
     // Distribusi mata kuliah
@@ -1270,6 +1532,7 @@
     renderHalamanTugas();
     renderHalamanStatistik();
     renderPengaturan();
+    renderVibeCheck();
     perbaruiTampilanTimer();
   }
 
@@ -1324,8 +1587,8 @@
     const miniNote = $('miniNote');
     if (miniNote) {
       miniNote.textContent = timer.berjalan
-        ? (modeIstirahat ? 'Istirahat dulu, jangan lupa minum air.' : 'Timer berjalan. Tetap fokus!')
-        : 'Tekan mulai saat siap belajar.';
+        ? (modeIstirahat ? 'Healing dulu, minum air dong 💧' : 'Gas terus, fokus! 💪')
+        : 'Tekan mulai, let’s go! 🚀';
     }
 
     // Halaman Pomodoro
@@ -1339,7 +1602,7 @@
     if (hint) {
       hint.textContent = timer.berjalan
         ? 'Berjalan…'
-        : (timer.sisaMs === timer.durasiMs ? 'Siap belajar' : 'Dijeda');
+        : (timer.sisaMs === timer.durasiMs ? 'Siap? Let’s go! 🚀' : 'Dijeda (resting is valid)');
     }
 
     const bigRing = $('bigRing');
@@ -1459,12 +1722,12 @@
     if (timer.mode === 'fokus') {
       state.prefs.sesiFokus += 1;
       simpanPref();
-      tampilkanNotifTimer('Sesi fokus selesai! Saatnya istirahat ' + state.prefs.istirahatMenit + ' menit. ☕', true);
-      tampilkanToast('Sesi fokus selesai. Kerja bagus! 🎉', 'success');
+      tampilkanNotifTimer('Sesi fokus selesai! Healing ' + state.prefs.istirahatMenit + ' menit dulu. ☕', true);
+      tampilkanToast('Sesi fokus selesai. +10 XP, kerja bagus! 🎉', 'success');
       timer.mode = 'istirahat';
     } else {
-      tampilkanNotifTimer('Istirahat selesai. Ayo kembali fokus! 💪', false);
-      tampilkanToast('Istirahat selesai. Siap fokus lagi?', 'info');
+      tampilkanNotifTimer('Healing selesai. Balik gas lagi! 💪', false);
+      tampilkanToast('Healing selesai. Siap fokus lagi?', 'info');
       timer.mode = 'fokus';
     }
     timer.durasiMs = durasiMode(timer.mode);
@@ -1517,6 +1780,10 @@
     const status = tugas ? tugas.status : 'belum';
     const radios = document.querySelectorAll('input[name="statusTask"]');
     for (const radio of radios) radio.checked = (radio.value === status);
+
+    // Picker emoji vibe
+    $('fieldVibeEmoji').value = tugas && tugas.vibeEmoji ? tugas.vibeEmoji : '';
+    renderVibeEmojiPicker($('fieldVibeEmoji').value);
 
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -1596,8 +1863,36 @@
       deadline: deadline,
       priority: $('fieldPriority').value,
       note: $('fieldNote').value.trim(),
+      vibeEmoji: $('fieldVibeEmoji').value || '',
       status: (document.querySelector('input[name="statusTask"]:checked') || {}).value || 'belum'
     };
+  }
+
+  // Picker emoji vibe di modal (klik lagi untuk batal pilih)
+  function renderVibeEmojiPicker(nilaiAktif) {
+    const wadah = $('vibeEmojiRow');
+    if (!elemanAman(wadah)) return;
+    wadah.textContent = '';
+
+    const pasangChip = function (teks, nilai, label) {
+      const btn = buatElemen('button', 'emoji-chip' + (nilaiAktif === nilai ? ' is-active' : ''));
+      btn.type = 'button';
+      btn.textContent = teks;
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('aria-pressed', String(nilaiAktif === nilai));
+      btn.addEventListener('click', function () {
+        const sekarang = $('fieldVibeEmoji').value;
+        $('fieldVibeEmoji').value = (sekarang === nilai) ? '' : nilai;
+        renderVibeEmojiPicker($('fieldVibeEmoji').value);
+      });
+      wadah.appendChild(btn);
+    };
+
+    pasangChip('🚫', '', 'Tanpa emoji');
+    for (const emoji of EMOJI_VIBE_TUGAS) {
+      pasangChip(emoji, emoji, 'Pilih emoji ' + emoji);
+    }
   }
 
   function simpanDariForm(event) {
@@ -1614,10 +1909,10 @@
     const id = $('taskId').value;
     if (id) {
       ubahTugas(id, data);
-      tampilkanToast('Tugas berhasil diperbarui.', 'success');
+      tampilkanToast('✨ Tugas ke-update. Fresh!', 'success');
     } else {
       tambahTugas(data);
-      tampilkanToast('Tugas baru berhasil ditambahkan.', 'success');
+      tampilkanToast('⚡ Tugas baru masuk planner. No cap!', 'success');
     }
 
     tutupModalTugas();
@@ -1664,7 +1959,7 @@
       onOk: function () {
         hapusTugas(tugas.id);
         renderSemua();
-        tampilkanToast('Tugas dihapus.', 'info');
+        tampilkanToast('Tugas terhapus 💨 Bye bye.', 'info');
       }
     });
   }
@@ -1703,6 +1998,27 @@
     }
     const heroGoTasks = $('heroGoTasks');
     if (heroGoTasks) heroGoTasks.addEventListener('click', function () { pindahHalaman('tugas'); });
+
+    /* --- Quick add (⚡) --- */
+    const formQuick = $('quickAddForm');
+    if (formQuick) formQuick.addEventListener('submit', quickAdd);
+    const inputQuick = $('quickAddName');
+    if (inputQuick) {
+      inputQuick.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          quickAdd(e);
+        }
+      });
+    }
+
+    /* --- Toggle tema (mode malam) --- */
+    const btnTheme = $('btnTheme');
+    if (btnTheme) {
+      btnTheme.addEventListener('click', function () {
+        setTema(state.prefs.tema === 'gelap' ? 'terang' : 'gelap');
+      });
+    }
 
     /* --- Pencarian --- */
     const search = $('searchInput');
@@ -1889,7 +2205,7 @@
             state.demoAktif = false;
             simpanTugas();
             renderSemua();
-            tampilkanToast('Semua tugas telah dihapus.', 'info');
+            tampilkanToast('Semua tugas terhapus. Fresh start! ✨', 'info');
           }
         });
       });
@@ -1907,6 +2223,9 @@
     muatPref();
     muatDataAwal();
 
+    // Terapkan tema sebelum render pertama (biar nggak flash)
+    terapkanTema();
+
     timer.durasiMs = durasiMode(timer.mode);
     timer.sisaMs = timer.durasiMs;
 
@@ -1916,11 +2235,12 @@
 
     // Simpan preferensi halaman terakhir
     simpanPref();
+    state.inisialisasiSelesai = true;
 
     // Info kecil untuk pengguna baru
     if (state.demoAktif) {
       window.setTimeout(function () {
-        tampilkanToast('Data demo dimuat. Reset kapan saja di Pengaturan.', 'info');
+        tampilkanToast('Data demo dimuat. Reset kapan pun di Pengaturan ✨', 'info');
       }, 700);
     }
   }
